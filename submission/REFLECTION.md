@@ -136,19 +136,37 @@ Thread count không phải bottleneck lớn nhất vì toàn bộ sweep chỉ tr
 > Bỏ trống nếu không làm. Xem `bonus/README.md`. Đừng làm hết — **một** finding sâu
 > ăn điểm hơn năm bảng nông.
 
-**Đã làm:** _<B1 build-compare / B2 sweep nào / B4 challenge nào / B5 lựa chọn nào>_
+**Đã làm:** B2 — Vulkan GPU offload sweep (`-ngl`); B3 — before/after bonus
+speedup; B5/C8 — offline semantic-cache diagnostic.
 
 **Numbers:**
 
 ```
-before:  <số>
-after:   <số>
-speedup: <X.Y>×
+before:  9.5 tok/s at `-ngl 0` (CPU-only)
+after:   12.6 tok/s at `-ngl 32`
+speedup: 1.33x
 ```
 
 **Điều này nói lên gì mà deck chưa nói:**
 
-_(để trống nếu bạn không làm phần này)_
+Moving enough layers to the Vulkan device raised decode throughput by 33%.
+Very small partial offloads were slower than CPU-only because they retained much
+of the CPU work while adding transfer and synchronization overhead. Performance
+flattened at 32-99 layers: `-ngl 99` reached 12.4 tok/s, 98% of the best result.
+This 0.2 tok/s difference is too small to prove a VRAM limit; it is more
+consistent with a nearly saturated offload configuration plus benchmark noise.
+
+### C8 semantic-cache offline diagnostic
+
+The offline semantic-cache demo produced 3/8 true cache hits (38%) and skipped
+about 750 ms of simulated decode time. It also exposed a false miss: "What does
+time to first token mean?" scored 0.00 against "Explain TTFT and TPOT." because
+the bag-of-words stub cannot match lexical paraphrases. Every threshold from
+0.70 to 0.95 produced the same 3/8 hits, so the flat curve is a stub artifact,
+not a deployable threshold result. No false hit appeared in this short stream;
+a real embedding model is needed to evaluate that failure mode. Production
+semantic caches should also be partitioned or salted per tenant to avoid timing
+and response leakage.
 
 ---
 
